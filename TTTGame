@@ -1,0 +1,361 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+package tttgame;
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.GridLayout;
+import java.awt.Panel;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JTextField;
+
+/**
+ *
+ * @author LENOVO
+ */
+public class TTTGame extends JFrame{
+    
+    // Named-constants for the game board
+    public static final int ROWS = 4;  // ROWS by COLS cells
+    public static final int COLS = 4;
+    public String first = "X";
+    public static final int EMPTY = 0;
+    public static final int CROSS = 1;
+    public static final int NOUGHT = 2;
+    
+    // Named-constants for display
+    public JButton button[];
+    public JLabel statusBar;
+    public JLabel playerX;
+    public JLabel scoreX;
+    public JLabel playerO;
+    public JLabel scoreO;
+    public JButton exitButton;
+    public JLabel a;
+    
+    // Name-constants to count score
+    public static int xCount = 0;
+    public static int oCount = 0;
+    
+    // Use an enumeration (inner class) to represent the various states of the game
+    public enum GameState {
+      PLAYING, DRAW, CROSS_WON, NOUGHT_WON
+    }
+    private GameState currentState;  // the current game state
+    
+    // Use an enumeration (inner class) to represent the seeds and cell contents
+    public enum Seed {
+      EMPTY, CROSS, NOUGHT
+    }
+    
+    private Seed currentPlayer;  // the current player
+    private Seed[][] board   ; // Game board of ROWS-by-COLS cells
+    
+    public TTTGame(){
+        super("Tic Tac Toe Game");
+        setLayout(new BorderLayout());
+        setLocation(500, 100); // set position in center
+        Panel status = new Panel(new FlowLayout());// create panel label status
+        status.setBackground(Color.CYAN);
+        Panel button = new Panel(new GridLayout(ROWS, COLS)); // create panel button
+        button.setBackground(Color.CYAN);
+        Panel south = new Panel(new FlowLayout(FlowLayout.LEFT)); //create panel south
+        south.setBackground(Color.CYAN);
+        this.getContentPane().add(status, BorderLayout.NORTH); // add to panel status with position north
+        this.getContentPane().add(button, BorderLayout.WEST); // add to panel button with position west
+        this.getContentPane().add(south, BorderLayout.SOUTH); // add to panel south with position south
+        statusDisplay(status); // function to display status
+        buttonDisplay(button); //function to display button
+        southDisplay(south); // function to display south
+        this.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
+        this.setResizable( false );
+        this.pack();
+        this.setVisible( true );
+        board = new Seed[ROWS][COLS]; // allocate array
+        initGame(); // initialize the game board contents and game variables
+        
+    }
+    // display status playing
+    public void statusDisplay(Panel p){
+        statusBar = new JLabel("Player 'X' Play First");
+        p.add(statusBar);
+        statusBar.setBorder(BorderFactory.createEmptyBorder(2, 5, 4, 5));
+    }
+    // display button based row and colom
+    public void buttonDisplay(Panel p){
+        button = new JButton[ ROWS * COLS ];
+        // initialize each button and add it to buttonsPanel
+        for ( int i = 0 ; i < ROWS * COLS ; i++ ) {
+            button[ i ] = new JButton();
+            button[ i ].setFocusPainted( false );
+            button[ i ].setBackground(Color.LIGHT_GRAY);
+            button[ i ].setActionCommand( Integer.toString( i ) );
+            button[ i ].setPreferredSize( new Dimension( 110 , 80 ) );
+            button[ i ].addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    // define position row selected and colom selected
+                    JButton button = (JButton) e.getSource();
+                    int rowSelected = Integer.parseInt( button.getActionCommand() ) / ROWS;
+                    int colSelected = Integer.parseInt( button.getActionCommand() ) % COLS;
+                    button.setText(first); // initialize text X first in button panel
+                    button.setBackground(Color.GRAY);
+                    // switch text X or O in button panel
+                    define_player();
+
+                    if (currentState == GameState.PLAYING) {
+                        if (rowSelected >= 0 && rowSelected < ROWS && colSelected >= 0
+                            && colSelected < COLS && board[rowSelected][colSelected] == Seed.EMPTY) {
+                            board[rowSelected][colSelected] = currentPlayer; // Make a move
+                            updateGame(currentPlayer, rowSelected, colSelected); // update state
+                            // Switch player
+                            currentPlayer = (currentPlayer == Seed.CROSS) ? Seed.NOUGHT : Seed.CROSS;
+                        }
+                    }else {       // game ove
+                        initGame(); // restart the game
+                    }
+                    if (currentState == GameState.PLAYING) {
+                        statusBar.setForeground(Color.BLACK);
+                        if (currentPlayer == Seed.CROSS) {
+                            statusBar.setText("Player 'X' Turn");
+                        }else {
+                            statusBar.setText("Player 'O' Turn");
+                        }
+                    }else if (currentState == GameState.DRAW) {
+                        statusBar.setForeground(Color.RED);
+                        statusBar.setText("It's a Draw! Please play again");
+                        int answer = JOptionPane.showConfirmDialog( null , "Are you play again?",
+                        "Confirm play again",JOptionPane.YES_NO_OPTION,JOptionPane.QUESTION_MESSAGE);
+                        if ( answer == JOptionPane.YES_OPTION ){
+                            resetGame();
+                            initGame();
+                            first="O";
+                            define_player();
+                            statusBar.setText("Player 'X' Play First");
+                            statusBar.setForeground(Color.BLACK);
+                        }else if( answer == JOptionPane.NO_OPTION ){
+                            if(xCount > oCount){
+                                JOptionPane.showMessageDialog( null , "Player 'X' Win!" ,"The Winner",
+                                JOptionPane.INFORMATION_MESSAGE );
+                            }else if(xCount < oCount){
+                                JOptionPane.showMessageDialog( null , "Player 'O' Win!" ,"The Winner",
+                                JOptionPane.INFORMATION_MESSAGE );
+                            }else if(xCount == oCount){
+                                JOptionPane.showMessageDialog( null , "Not Player Win!" ,"The Winner",
+                                JOptionPane.INFORMATION_MESSAGE );
+                            }
+                            resetGame();
+                            scoreX.setText("0           ");
+                            scoreO.setText("0           ");
+                            xCount=0;
+                            oCount=0;
+                            initGame();
+                            first="O";
+                            define_player();
+                            statusBar.setText("Player 'X' Play First");
+                            statusBar.setForeground(Color.BLACK);
+                        }
+                    }else if (currentState == GameState.CROSS_WON) {
+                        statusBar.setForeground(Color.RED);
+                        statusBar.setText("Player 'X' Won! Please play again");
+                        xCount++;
+                        resultScore();
+                        int answer = JOptionPane.showConfirmDialog( null , "Are you play again?",
+                        "Confirm play again",JOptionPane.YES_NO_OPTION,JOptionPane.QUESTION_MESSAGE);
+                        if ( answer == JOptionPane.YES_OPTION ){
+                            resetGame();
+                            initGame();
+                            define_player();
+                            statusBar.setText("Player 'X' Play First");
+                            statusBar.setForeground(Color.BLACK);
+                        }else if( answer == JOptionPane.NO_OPTION ){
+                            if(xCount == oCount){
+                                JOptionPane.showMessageDialog( null , "Not Player Win!" ,"The Winner",
+                                JOptionPane.INFORMATION_MESSAGE );
+                            }else{
+                                JOptionPane.showMessageDialog( null , "Player 'X' Win!" ,"The Winner",
+                                JOptionPane.INFORMATION_MESSAGE );
+                            }
+                            resetGame();
+                            scoreX.setText("0           ");
+                            scoreO.setText("0           ");
+                            xCount=0;
+                            oCount=0;
+                            initGame();
+                            define_player();
+                            statusBar.setText("Player 'X' Play First");
+                            statusBar.setForeground(Color.BLACK);
+                        }
+                          
+                    }else if (currentState == GameState.NOUGHT_WON) {
+                        statusBar.setForeground(Color.RED);
+                        statusBar.setText("Player 'O' Won! Please play again");
+                        oCount++;
+                        resultScore();
+                        int answer = JOptionPane.showConfirmDialog( null , "Are you play again?",
+                        "Confirm play again",JOptionPane.YES_NO_OPTION,JOptionPane.QUESTION_MESSAGE);
+                        if ( answer == JOptionPane.YES_OPTION ){
+                            resetGame();
+                            initGame();
+                            first="O";
+                            define_player();
+                            statusBar.setText("Player 'X' Play First");
+                            statusBar.setForeground(Color.BLACK);
+                        }else if( answer == JOptionPane.NO_OPTION ){
+                            if(xCount == oCount){
+                                JOptionPane.showMessageDialog( null , "Not Player Win!" ,"The Winner",
+                                JOptionPane.INFORMATION_MESSAGE );
+                            }else{
+                                JOptionPane.showMessageDialog( null , "Player 'O' Win!" ,"The Winner",
+                                JOptionPane.INFORMATION_MESSAGE );
+                            }
+                            resetGame();
+                            scoreX.setText("0           ");
+                            scoreO.setText("0           ");
+                            xCount=0;
+                            oCount=0;
+                            initGame();
+                            first="O";
+                            define_player();
+                            statusBar.setText("Player 'X' Play First");
+                            statusBar.setForeground(Color.BLACK);
+                        }
+                    }
+                }
+               }); 
+            p.add(button[i]);
+        }
+    }
+    
+    public void southDisplay(Panel p){
+        playerX = new JLabel("Player X : ");
+        p.add(playerX);
+        scoreX = new JLabel("0           ");
+        scoreX.setForeground(Color.red);
+        scoreX.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
+        p.add(scoreX);
+        
+        playerO = new JLabel("Player O :");
+        p.add(playerO);
+        scoreO = new JLabel("0           ");
+        scoreO.setForeground(Color.red);
+        scoreO.setBorder(BorderFactory.createLineBorder(Color.BLACK,2));
+        p.add(scoreO);
+        
+        a = new JLabel("                 ");
+        p.add(a);
+        
+        exitButton = new JButton("Exit");
+         //register an ActionListener for exitButton
+        exitButton.addActionListener(
+           new ActionListener()
+           {
+               public void actionPerformed( ActionEvent ae )
+               {
+                   // do a normal exit
+                   System.exit( 0 );
+               }
+           }
+        );
+        p.add(exitButton);
+        
+    }
+    
+    /** Initialize the game-board contents and the status */
+    public void initGame() {
+        for (int row = 0; row < ROWS; ++row) {
+            for (int col = 0; col < COLS; ++col) {
+            board[row][col] = Seed.EMPTY; // all cells empty
+            }
+        }
+        currentState = GameState.PLAYING; // ready to play
+        currentPlayer = Seed.CROSS;       // cross plays first
+    }
+ 
+    /** Update the currentState after the player with "theSeed" has placed on
+       (rowSelected, colSelected). */
+    public void updateGame(Seed theSeed, int rowSelected, int colSelected) {
+        if (hasWon(theSeed, rowSelected, colSelected)) {  // check for win
+            currentState = (theSeed == Seed.CROSS) ? GameState.CROSS_WON : GameState.NOUGHT_WON;
+        }else if (isDraw()) {  // check for draw
+            currentState = GameState.DRAW;
+        }
+    // Otherwise, no change to current state (still GameState.PLAYING).
+    }
+ 
+    /** Return true if it is a draw (i.e., no more empty cell) */
+    public boolean isDraw() {
+        for (int row = 0; row < ROWS; ++row) {
+            for (int col = 0; col < COLS; ++col) {
+                if (board[row][col] == Seed.EMPTY) {
+                    return false; // an empty cell found, not draw, exit
+                }
+            }
+        }
+        return true;  // no more empty cell, it's a draw
+    }
+ 
+    /** Return true if the player with "theSeed" has won after placing at
+       (rowSelected, colSelected) */
+    public boolean hasWon(Seed theSeed, int rowSelected, int colSelected) {
+        return (board[rowSelected][0] == theSeed  // 4-in-the-row
+                && board[rowSelected][1] == theSeed
+                && board[rowSelected][2] == theSeed
+                && board[rowSelected][3] == theSeed
+        || board[0][colSelected] == theSeed      // 4-in-the-column
+                && board[1][colSelected] == theSeed
+                && board[2][colSelected] == theSeed
+                && board[3][colSelected] == theSeed
+        || rowSelected == colSelected            // 4-in-the-diagonal
+                && board[0][0] == theSeed
+                && board[1][1] == theSeed
+                && board[2][2] == theSeed
+                && board[3][3] == theSeed
+       || rowSelected + colSelected == 3  // 4-in-the-opposite-diagonal
+                && board[0][3] == theSeed
+                && board[1][2] == theSeed
+                && board[2][1] == theSeed
+                && board[3][0] == theSeed
+        );
+   }
+    
+    public void define_player(){
+        if (first.equalsIgnoreCase("X")){
+            first="O";
+        }else{
+            first="X";
+        } 
+    }
+    
+    
+    public void resultScore(){
+        scoreX.setText(String.valueOf(xCount+"           "));
+        scoreO.setText(String.valueOf(oCount+"           "));
+    }
+    
+    public void resetGame(){
+        board = new Seed[ROWS][COLS];
+        for ( int i = 0 ; i < ROWS * COLS ; i++ ){
+            button[i].setText("");
+            button[i].setBackground(Color.LIGHT_GRAY);
+        }
+        
+    }
+    
+    public static void main(String[] args) {
+        TTTGame ttt = new TTTGame();
+    }
+    
+}
